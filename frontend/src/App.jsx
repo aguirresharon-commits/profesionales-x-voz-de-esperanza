@@ -1,4 +1,12 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 import {
   Link,
   Outlet,
@@ -2599,10 +2607,14 @@ function Layout() {
     }
   }, [drawerOpen])
 
-  useEffect(() => {
-    if (!drawerOpen) return
+  // Cerrar el menú lateral en cuanto cambia la URL (evita overlay oscuro atrapado).
+  useLayoutEffect(() => {
     setDrawerOpen(false)
   }, [location.pathname, location.hash])
+
+  useLayoutEffect(() => {
+    setLogoutConfirmOpen(false)
+  }, [location.pathname])
 
   useEffect(() => {
     if (!drawerOpen) return

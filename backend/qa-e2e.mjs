@@ -1,4 +1,7 @@
-const API = 'http://localhost:4000'
+const API = String(process.env.API_URL ?? 'http://localhost:4000').replace(
+  /\/+$/,
+  '',
+)
 
 async function req(path, { method = 'GET', body } = {}) {
   const res = await fetch(`${API}${path}`, {

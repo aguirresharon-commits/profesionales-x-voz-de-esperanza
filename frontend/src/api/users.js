@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:4000'
+import API from './baseUrl.js'
 
 async function readErrorMessage(res) {
   try {
@@ -24,7 +24,7 @@ function mapUserFromApi(doc) {
 
 export async function getUser(email) {
   const e = String(email ?? '').trim()
-  const res = await fetch(`${API_BASE}/users/${encodeURIComponent(e)}`)
+  const res = await fetch(`${API}/users/${encodeURIComponent(e)}`)
   if (res.status === 404) return null
   if (!res.ok) throw new Error(await readErrorMessage(res))
   const data = await res.json()
@@ -32,7 +32,7 @@ export async function getUser(email) {
 }
 
 export async function createUser(data) {
-  const res = await fetch(`${API_BASE}/users`, {
+  const res = await fetch(`${API}/users`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data ?? {}),
@@ -46,7 +46,7 @@ export async function createUser(data) {
 
 export async function updateUser(email, data) {
   const e = String(email ?? '').trim()
-  const res = await fetch(`${API_BASE}/users/${encodeURIComponent(e)}`, {
+  const res = await fetch(`${API}/users/${encodeURIComponent(e)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data ?? {}),

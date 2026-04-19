@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:4000'
+import API from './baseUrl.js'
 
 function mapReviewFromApi(doc) {
   if (!doc) return null
@@ -25,7 +25,7 @@ async function readErrorMessage(res) {
 }
 
 export async function fetchReviews(serviceId) {
-  const res = await fetch(`${API_BASE}/reviews/${encodeURIComponent(serviceId)}`)
+  const res = await fetch(`${API}/reviews/${encodeURIComponent(serviceId)}`)
   if (!res.ok) throw new Error(await readErrorMessage(res))
   const data = await res.json()
   if (!Array.isArray(data)) return []
@@ -33,7 +33,7 @@ export async function fetchReviews(serviceId) {
 }
 
 export async function createReview(payload) {
-  const res = await fetch(`${API_BASE}/reviews`, {
+  const res = await fetch(`${API}/reviews`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -44,7 +44,7 @@ export async function createReview(payload) {
 }
 
 export async function deleteReview(id) {
-  const res = await fetch(`${API_BASE}/reviews/${encodeURIComponent(id)}`, {
+  const res = await fetch(`${API}/reviews/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   })
   const data = await res.json().catch(() => ({}))

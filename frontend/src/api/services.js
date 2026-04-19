@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:4000'
+import API from './baseUrl.js'
 
 function mapServiceFromApi(doc) {
   if (!doc) return null
@@ -33,7 +33,7 @@ async function readErrorMessage(res) {
  * Lista todos los servicios desde el backend.
  */
 export async function fetchServices() {
-  const res = await fetch(`${API_BASE}/services`)
+  const res = await fetch(`${API}/services`)
   if (!res.ok) {
     throw new Error(await readErrorMessage(res))
   }
@@ -46,7 +46,7 @@ export async function fetchServices() {
  * Obtiene un servicio por id (usa el listado; el backend no expone GET por id).
  */
 export async function fetchServiceById(id) {
-  const res = await fetch(`${API_BASE}/services`)
+  const res = await fetch(`${API}/services`)
   if (!res.ok) {
     throw new Error(await readErrorMessage(res))
   }
@@ -64,7 +64,7 @@ export function getRecentServices(services, limit = 3) {
  * Crea un servicio (POST). `payload` usa los nombres de campo del API.
  */
 export async function createService(payload) {
-  const res = await fetch(`${API_BASE}/services`, {
+  const res = await fetch(`${API}/services`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -79,7 +79,7 @@ export async function createService(payload) {
 }
 
 export async function updateService(id, payload) {
-  const res = await fetch(`${API_BASE}/services/${encodeURIComponent(id)}`, {
+  const res = await fetch(`${API}/services/${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -92,7 +92,7 @@ export async function updateService(id, payload) {
 }
 
 export async function deleteService(id) {
-  const res = await fetch(`${API_BASE}/services/${encodeURIComponent(id)}`, {
+  const res = await fetch(`${API}/services/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   })
   const data = await res.json().catch(() => ({}))
