@@ -1,4 +1,5 @@
 import { Router } from 'express'
+import { isObjectIdOrHexString } from 'mongoose'
 import Service from '../models/Service.js'
 
 const router = Router()
@@ -41,8 +42,32 @@ router.post('/', async (req, res) => {
 
 router.get('/', async (req, res) => {
   try {
-    const services = await Service.find().sort({ createdAt: -1 })
-    res.json(services)
+    const query = Service.find().sort({ createdAt: -1, _id: -1 }).lean()
+    const { limit } = req.query
+
+    if (limit !== undefined) {
+      if (typeof limit !== 'string' || !/^[1-9][0-9]?$/.test(limit)) {
+        return res.status(400).json({ error: 'El límite debe estar entre 1 y 99.' })
+      }
+      query.limit(Number(limit))
+    }
+
+    res.json(await query)
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+router.get('/:id', async (req, res) => {
+  const { id } = req.params
+  if (!isObjectIdOrHexString(id)) {
+    return res.status(404).json({ error: 'Servicio no encontrado.' })
+  }
+
+  try {
+    const service = await Service.findById(id).lean()
+    if (!service) return res.status(404).json({ error: 'Servicio no encontrado.' })
+    res.json(service)
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
