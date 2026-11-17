@@ -44,7 +44,6 @@ import { auth, firebaseInitError } from './firebase.js'
 
 const DEFAULT_WA_MESSAGE = 'Hola, te contacto desde Voz de Esperanza.'
 const LOGO_SRC = '/assets/logo-paloma.png'
-const HERO_IMAGE_SRC = '/assets/hero-atardecer.png'
 
 function IconHeartPulse({ className }) {
   return (
@@ -610,11 +609,23 @@ function HomeFooter() {
   )
 }
 
+function normalizeSearch(text) {
+  return text.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().trim()
+}
+
+function servicesUrl(query, zone) {
+  const params = new URLSearchParams()
+  if (query.trim()) params.set('q', query.trim())
+  if (zone.trim()) params.set('zona', zone.trim())
+  return params.size ? `/services?${params}` : '/services'
+}
+
 const RECENT_SERVICES_LIMIT = 4
 
 function HomePage() {
   const navigate = useNavigate()
   const [heroSearch, setHeroSearch] = useState('')
+  const [heroZone, setHeroZone] = useState('')
   const [state, setState] = useState({
     status: 'loading',
     services: [],
@@ -623,12 +634,7 @@ function HomePage() {
 
   function onHeroSearchSubmit(e) {
     e.preventDefault()
-    const q = heroSearch.trim()
-    if (q) {
-      navigate(`/services?q=${encodeURIComponent(q)}`)
-    } else {
-      navigate('/services')
-    }
+    navigate(servicesUrl(heroSearch, heroZone))
   }
 
   async function load() {
@@ -654,21 +660,13 @@ function HomePage() {
   return (
     <div className="pageHome">
       <section className="hero" aria-labelledby="portal-hero-title">
-        <div className="heroCard" style={{ backgroundImage: `url(${HERO_IMAGE_SRC})` }}>
-          <div className="heroOverlay" aria-hidden="true" />
+        <div className="heroCard">
           <div className="heroContent">
             <h1 id="portal-hero-title" className="heroTitle">
-              Conectando
-              <br />
-              profesionales con
-              <br />
-              la comunidad
+              Encontrá profesionales en tu zona
             </h1>
             <p className="heroSubtitle">
-              Encontrá servicios de confianza,
-              <br />
-              personas dispuestas a ayudar
-              <br />y oportunidades para crecer juntos.
+              Buscá un servicio y contactá por WhatsApp.
             </p>
 
             <form className="heroSearch" onSubmit={onHeroSearchSubmit}>
@@ -689,10 +687,21 @@ function HomePage() {
                 />
               </div>
 
+              <label className="heroSearchField">
+                <span className="visuallyHidden">Barrio o ciudad</span>
+                <input
+                  className="heroSearchInput"
+                  type="search"
+                  name="zona"
+                  placeholder="¿En qué zona? (opcional)"
+                  value={heroZone}
+                  onChange={(e) => setHeroZone(e.target.value)}
+                />
+              </label>
               <div className="heroActions">
-                <Link className="heroBtn heroBtnPrimary" to="/services">
+                <button className="heroBtn heroBtnPrimary" type="submit">
                   Buscar profesionales
-                </Link>
+                </button>
                 <Link className="heroBtn heroBtnSecondary" to="/create">
                   Publicar servicio
                 </Link>
@@ -772,12 +781,16 @@ function HomePage() {
 }
 
 function ServicesPage() {
-  const [searchParams] = useSearchParams()
-  const [query, setQuery] = useState(() => searchParams.get('q') ?? '')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const query = searchParams.get('q') ?? ''
+  const zone = searchParams.get('zona') ?? ''
 
-  useEffect(() => {
-    setQuery(searchParams.get('q') ?? '')
-  }, [searchParams])
+  function updateFilters(nextQuery, nextZone) {
+    const params = new URLSearchParams()
+    if (nextQuery) params.set('q', nextQuery)
+    if (nextZone) params.set('zona', nextZone)
+    setSearchParams(params, { replace: true, preventScrollReset: true })
+  }
 
   const [state, setState] = useState({
     status: 'loading',
@@ -803,25 +816,22 @@ function ServicesPage() {
     load()
   }, [])
 
-  const q = query.trim().toLowerCase()
+  const normalizedQuery = normalizeSearch(query)
+  const normalizedZone = normalizeSearch(zone)
   const filtered = useMemo(() => {
-    if (!q) return state.services
-    return state.services.filter((s) => {
-      const hay = [
-        s.nombre,
-        s.profesion,
-        s.descripcion,
-        s.ubicacion,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-      return hay.includes(q)
+    const terms = normalizedQuery.split(/\s+/).filter(Boolean)
+    return state.services.filter((service) => {
+      const location = normalizeSearch(service.ubicacion)
+      const description = normalizeSearch([
+        service.nombre, service.profesion, service.descripcion, service.ubicacion,
+      ].join(' '))
+      return location.includes(normalizedZone) &&
+        terms.every((term) => description.includes(term))
     })
-  }, [q, state.services])
+  }, [normalizedQuery, normalizedZone, state.services])
 
-  const hasSearch = q.length > 0
-  const resultsUrl = hasSearch ? `/services?q=${encodeURIComponent(query.trim())}` : '/services'
+  const hasSearch = Boolean(normalizedQuery || normalizedZone)
+  const resultsUrl = servicesUrl(query, zone)
 
   return (
     <>
@@ -834,8 +844,7 @@ function ServicesPage() {
       <div className="pageHeader">
         <h1>Servicios</h1>
         <p className="pageGuide">
-          Buscá por nombre/profesión/zona/descripcion. Podés contactar por
-          WhatsApp desde la tarjeta.
+          Buscá por nombre, oficio o zona. Contactá por WhatsApp desde la tarjeta.
         </p>
       </div>
 
@@ -843,11 +852,25 @@ function ServicesPage() {
         <input
           className="searchInput"
           type="search"
-          placeholder="Nombre, oficio, zona…"
+          aria-label="Nombre u oficio"
+          placeholder="Nombre u oficio"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={(e) => updateFilters(e.target.value, zone)}
+        />
+        <input
+          className="searchInput"
+          type="search"
+          aria-label="Barrio o ciudad"
+          placeholder="Barrio o ciudad"
+          value={zone}
+          onChange={(e) => updateFilters(query, e.target.value)}
         />
       </div>
+
+      <p className="searchSummary" role="status">
+        {state.status === 'loading' && 'Cargando servicios…'}
+        {state.status === 'ok' && (filtered.length === 1 ? '1 servicio encontrado' : `${filtered.length} servicios encontrados`)}
+      </p>
 
       {state.status === 'loading' ? (
         <div className="grid">
@@ -884,17 +907,12 @@ function ServicesPage() {
 
       {state.status === 'ok' && filtered.length === 0 && hasSearch ? (
         <div className="empty surface">
-          <div className="emptyTitle">No hay resultados para “{q}”</div>
+          <div className="emptyTitle">No encontramos servicios</div>
+          <p>Probá con otro oficio o una zona cercana.</p>
           <div className="emptyActions">
-            <button className="pill" type="button" onClick={() => setQuery('')}>
-              Limpiar búsqueda
+            <button className="pill" type="button" onClick={() => updateFilters('', '')}>
+              Limpiar filtros
             </button>
-            <Link className="pill" to="/services">
-              Ver todos los servicios
-            </Link>
-            <Link className="pill" to="/">
-              Ir al inicio
-            </Link>
           </div>
         </div>
       ) : null}
