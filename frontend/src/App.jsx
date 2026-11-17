@@ -445,7 +445,7 @@ function SkeletonCard() {
   )
 }
 
-function ServiceCard({ service, showDetailLink = true, showWhatsApp = true }) {
+function ServiceCard({ service, resultsUrl, showDetailLink = true, showWhatsApp = true }) {
   const phoneDigits = normalizeDigits(service.telefono)
   const canWhatsApp = isValidPhoneDigits(service.telefono)
   const waUrl = canWhatsApp
@@ -455,7 +455,7 @@ function ServiceCard({ service, showDetailLink = true, showWhatsApp = true }) {
   return (
     <article className="svcCard surface">
       {service.imagenUrl ? (
-        <img className="svcImg" src={service.imagenUrl} alt="" />
+        <img className="svcImg" src={service.imagenUrl} alt="" loading="lazy" decoding="async" />
       ) : (
         <div className="svcImg svcImgEmpty">Sin imagen</div>
       )}
@@ -470,7 +470,7 @@ function ServiceCard({ service, showDetailLink = true, showWhatsApp = true }) {
         {(showDetailLink || showWhatsApp) && (
           <div className="svcActions">
             {showDetailLink && service.id ? (
-              <Link className="pill" to={`/services/${service.id}`}>
+              <Link className="pill" to={`/services/${service.id}`} state={{ resultsUrl }}>
                 Ver detalle
               </Link>
             ) : null}
@@ -506,7 +506,7 @@ function DashboardServiceCard({
   return (
     <article className="svcCard surface">
       {service.imagenUrl ? (
-        <img className="svcImg" src={service.imagenUrl} alt="" />
+        <img className="svcImg" src={service.imagenUrl} alt="" loading="lazy" decoding="async" />
       ) : (
         <div className="svcImg svcImgEmpty">Sin imagen</div>
       )}
@@ -551,7 +551,7 @@ function HomeServiceCard({ service }) {
   return (
     <article className="homeRecentCard surface">
       {service.imagenUrl ? (
-        <img className="homeRecentImg" src={service.imagenUrl} alt="" />
+        <img className="homeRecentImg" src={service.imagenUrl} alt="" loading="lazy" decoding="async" />
       ) : (
         <div className="homeRecentImg homeRecentImgPlaceholder" aria-hidden="true">
           {service.nombre.trim().slice(0, 1).toUpperCase()}
@@ -610,6 +610,8 @@ function HomeFooter() {
   )
 }
 
+const RECENT_SERVICES_LIMIT = 4
+
 function HomePage() {
   const navigate = useNavigate()
   const [heroSearch, setHeroSearch] = useState('')
@@ -632,7 +634,7 @@ function HomePage() {
   async function load() {
     setState({ status: 'loading', services: [], error: null })
     try {
-      const services = await fetchServices()
+      const services = await fetchServices({ limit: RECENT_SERVICES_LIMIT })
       setState({ status: 'ok', services, error: null })
     } catch (e) {
       setState({
@@ -647,7 +649,7 @@ function HomePage() {
     load()
   }, [])
 
-  const recent = getRecentServices(state.services, 4)
+  const recent = getRecentServices(state.services, RECENT_SERVICES_LIMIT)
 
   return (
     <div className="pageHome">
@@ -819,6 +821,7 @@ function ServicesPage() {
   }, [q, state.services])
 
   const hasSearch = q.length > 0
+  const resultsUrl = hasSearch ? `/services?q=${encodeURIComponent(query.trim())}` : '/services'
 
   return (
     <>
@@ -843,7 +846,6 @@ function ServicesPage() {
           placeholder="Nombre, oficio, zona…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          disabled={state.status === 'loading'}
         />
       </div>
 
@@ -900,7 +902,7 @@ function ServicesPage() {
       {state.status === 'ok' && filtered.length > 0 ? (
         <div className="grid">
           {filtered.map((s) => (
-            <ServiceCard key={s.id} service={s} />
+            <ServiceCard key={s.id} service={s} resultsUrl={resultsUrl} />
           ))}
         </div>
       ) : null}
@@ -910,6 +912,8 @@ function ServicesPage() {
 
 function ServiceDetailPage() {
   const { id } = useParams()
+  const { state: navigationState } = useLocation()
+  const resultsUrl = navigationState?.resultsUrl ?? '/services'
   const { user } = useOutletContext()
   const [state, setState] = useState({
     status: 'loading',
@@ -998,7 +1002,7 @@ function ServiceDetailPage() {
     return (
       <>
         <div className="detailToolbar">
-          <Link className="pill" to="/services">
+          <Link className="pill" to={resultsUrl}>
             ← Servicios
           </Link>
           <Link className="pill" to="/">
@@ -1020,7 +1024,7 @@ function ServiceDetailPage() {
     return (
       <>
         <div className="detailToolbar">
-          <Link className="pill" to="/services">
+          <Link className="pill" to={resultsUrl}>
             ← Servicios
           </Link>
           <Link className="pill" to="/">
@@ -1033,7 +1037,7 @@ function ServiceDetailPage() {
           actionLabel="Intentar nuevamente"
           onAction={load}
           secondaryLabel="Volver al listado"
-          secondaryTo="/services"
+          secondaryTo={resultsUrl}
         />
       </>
     )
@@ -1043,7 +1047,7 @@ function ServiceDetailPage() {
     return (
       <>
         <div className="detailToolbar">
-          <Link className="pill" to="/services">
+          <Link className="pill" to={resultsUrl}>
             ← Servicios
           </Link>
           <Link className="pill" to="/">
@@ -1053,7 +1057,7 @@ function ServiceDetailPage() {
         <div className="empty surface">
           <div className="emptyTitle">No encontramos este servicio.</div>
           <div className="emptyActions">
-            <Link className="pill pillPrimary" to="/services">
+            <Link className="pill pillPrimary" to={resultsUrl}>
               Volver al listado
             </Link>
             <Link className="pill" to="/">
@@ -1073,7 +1077,7 @@ function ServiceDetailPage() {
   return (
     <>
       <div className="detailToolbar">
-        <Link className="pill" to="/services">
+        <Link className="pill" to={resultsUrl}>
           ← Servicios
         </Link>
         <Link className="pill" to="/">

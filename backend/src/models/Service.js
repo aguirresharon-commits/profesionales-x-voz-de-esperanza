@@ -13,4 +13,6 @@ const serviceSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 })
 
+serviceSchema.index({ createdAt: -1, _id: -1 })
+
 export default mongoose.model('Service', serviceSchema)

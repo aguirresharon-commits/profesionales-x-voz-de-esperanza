@@ -30,10 +30,11 @@ async function readErrorMessage(res) {
 }
 
 /**
- * Lista todos los servicios desde el backend.
+ * Lista servicios, con un límite opcional para el inicio.
  */
-export async function fetchServices() {
-  const res = await fetch(`${API}/services`)
+export async function fetchServices({ limit } = {}) {
+  const params = limit === undefined ? '' : `?limit=${encodeURIComponent(limit)}`
+  const res = await fetch(`${API}/services${params}`)
   if (!res.ok) {
     throw new Error(await readErrorMessage(res))
   }
@@ -42,18 +43,19 @@ export async function fetchServices() {
   return data.map(mapServiceFromApi)
 }
 
-/**
- * Obtiene un servicio por id (usa el listado; el backend no expone GET por id).
- */
 export async function fetchServiceById(id) {
-  const res = await fetch(`${API}/services`)
+  const res = await fetch(`${API}/services/${encodeURIComponent(id)}`)
+  if (res.status === 404) {
+    if (res.headers.get('content-type')?.includes('application/json')) return null
+
+    // La versión anterior de la API devuelve un 404 HTML para esta ruta.
+    const services = await fetchServices()
+    return services.find((service) => service.id === String(id)) ?? null
+  }
   if (!res.ok) {
     throw new Error(await readErrorMessage(res))
   }
-  const data = await res.json()
-  if (!Array.isArray(data)) return null
-  const doc = data.find((d) => String(d._id) === String(id))
-  return doc ? mapServiceFromApi(doc) : null
+  return mapServiceFromApi(await res.json())
 }
 
 export function getRecentServices(services, limit = 3) {
